@@ -29,6 +29,7 @@ type EventCallbackRemover func()
 type Connection struct { //nolint:govet // The current order aids readability.
 	mu           sync.RWMutex
 	request      *http.Request
+	response     *http.Response
 	callbacks    map[string]map[int]EventCallback
 	callbacksAll map[int]EventCallback
 	lastEventID  string
@@ -105,6 +106,10 @@ func (c *Connection) addSubscriber(event string, cb EventCallback) EventCallback
 func (c *Connection) Buffer(buf []byte, maxSize int) {
 	c.buf = buf
 	c.bufMaxSize = maxSize
+}
+
+func (c *Connection) Response() *http.Response {
+	return c.response
 }
 
 // ConnectionError is the type that wraps all the connection errors that occur.
@@ -234,6 +239,7 @@ func (c *Connection) doConnect(ctx context.Context, setRetry func(time.Duration)
 	}
 
 	res, err := c.client.HTTPClient.Do(c.request)
+	c.response = res
 	if err != nil {
 		concrete := err.(*url.Error) //nolint:errorlint // We know the concrete type here
 		if errors.Is(err, ctx.Err()) {
